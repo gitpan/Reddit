@@ -13,6 +13,7 @@ WriteMakefile(
         'JSON'            => 0,
         'HTTP::Cookies'   => 0,
         'Data::Dumper'    => 0,
+        'common::sense'   => 0,
 
     }, # e.g., Module::Name => 1.1
 

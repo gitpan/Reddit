@@ -1,6 +1,6 @@
 package Reddit;
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 use 5.012004;
 use Data::Dumper;
