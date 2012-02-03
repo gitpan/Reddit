@@ -1,87 +1,150 @@
 package Reddit;
 
-our $VERSION = '0.11';
+our $VERSION = '0.30';
 
 use 5.012004;
 use Data::Dumper;
 
 use common::sense;
 
-use LWP::Simple;
 use JSON;
-
 use HTTP::Cookies;
 use LWP::UserAgent;
 
-my $base_url        = 'http://www.reddit.com/';
-my $api_url         = $base_url . 'api/';
-my $login_url       = $api_url . 'login';
-my $submit_url      = $api_url . 'submit';
-my $comment_url     = $api_url . 'comment';
+use Moose;
 
-my $api_type        = 'json';
+use lib './';
+use Reddit::Type::User;
+#use Reddit::Type::Subreddit;
 
-sub new {
-    my $obj_class       = shift;
-    my $class = ref $obj_class || $obj_class;
-        
-    my ($user, $passwd, $subreddit) = @_;
+has 'base_url' => (
+	is	=> 'ro',
+	isa => 'Str',
+	default => 'http://www.reddit.com/',
+);
 
-    my $self = {
-        base_url    => $base_url,
-        api_url     => $api_url,
-        
-        login_url   => $login_url,
-        submit_url  => $submit_url,
+has 'api_url' => (
+	is	=> 'ro',
+	isa => 'Str',
+	lazy	=> 1,
+	default => sub { $_[0]->base_url . 'api/' },
+);
 
-        api_type    => $api_type,
+has 'login_api' => (
+	is => 'ro',
+	isa => 'Str',
+	lazy	=> 1,
+	default => sub { $_[0]->api_url . 'login' },
+); 
 
-        user        => $user,
-        passwd      => $passwd,
+has 'submit_api' => (
+	is => 'ro',
+	isa => 'Str',
+	lazy	=> 1,
+	default => sub { $_[0]->api_url . 'submit' },	
+);
 
-        subreddit   => $subreddit,
+has 'comment_api' => (
+	is => 'ro',
+	isa => 'Str',
+	lazy	=> 1,
+	default => sub { $_[0]->api_url . 'comment' },	
+);
 
-        ua          => new LWP::UserAgent,
-        cookie_jar  => HTTP::Cookies->new,
+has 'vote_api' => (
+	is => 'ro',
+	isa => 'Str',
+	lazy	=> 1,
+	default => sub { $_[0]->api_url . 'vote' },	
+);
 
-        modhash     => '',
-    };
+has 'api_type'	=> (
+	is => 'ro',
+	isa => 'Str',
+	default => 'json',
+);
 
-    bless $self, $class;
-    
-    $self->create_methods;
-    return $self;
+has 'ua' => (
+    is  => 'rw',
+    isa => 'LWP::UserAgent',
+    default => sub { LWP::UserAgent->new },
+#    handles => qr/^(?:head|get|post|agent|request.*)/,
+	handles => { 
+		post				=> 'post',
+		get					=> 'get',
+		agent_cookie_jar 	=> 'cookie_jar' 
+	}
+);
+
+has 'cookie_jar' => (
+	is => 'rw',
+	isa => 'HTTP::Cookies',
+	lazy => 1,
+	default => sub { HTTP::Cookies->new },	
+);
+
+has [ 'user_name', 'password', ] => (
+	is => 'rw',
+	isa => 'Str',
+	required => 1,	
+	trigger => \&_login,
+);
+
+has 'subreddit' => (
+	is => 'rw',
+	isa => 'Str',
+);
+
+has 'modhash' => (
+	is => 'rw',
+	isa => 'Str',
+);
+
+has '_user_search_name' => (
+	is => 'rw',
+	isa => 'Str',
+	lazy => 1,
+	default => '',
+);
+
+has 'about_user_api' => (
+	is => 'rw',
+	isa => 'Str',
+	lazy => 1,
+	default => sub { $_[0]->base_url . 'user/' . $_[0]->_user_search_name . '/about.json' },
+);
+
+has 'user_info' => (
+	is => 'rw',
+	isa => 'Reddit::Type::User',
+	lazy => 1,
+	default => sub { Reddit::Type::User->new },
+);
+
+sub _login {
+	my $self = shift;
+	
+	my $response = $self->ua->post($self->login_api,
+        {
+            api_type    => $self->api_type,
+            user        => $self->user_name,
+            passwd      => $self->password,
+        }
+    );
+
+    $self->_set_cookie($response);
 }
 
-#>-----------------------------------------------<#
-#  Helper Methods
-#>-----------------------------------------------<#
-
-# create accessor/mutator methods for defined parameters
-sub create_methods {
-    my $self = shift;
-    for my $datum (keys %{$self}) {
-        no strict "refs";
-        *$datum = sub {
-            my $self = shift;
-            $self->{$datum} = shift if @_;
-            return $self->{$datum};
-        };
-    }
-}
-
-# Set cookie 
-sub set_cookie {
+sub _set_cookie {
     my $self        = shift;
-    my $response    = shift;    
+    my $response    = shift;
 
     $self->cookie_jar->extract_cookies ($response);
-    $self->ua->cookie_jar ($self->cookie_jar);
-    $self->parse_modhash ($response);
+    $self->agent_cookie_jar ($self->cookie_jar);
+    $self->_parse_modhash ($response);
 }
 
-# Set modhash
-sub parse_modhash {
+sub _parse_modhash {
     my $self        = shift;
     my $response    = shift;
 
@@ -89,37 +152,12 @@ sub parse_modhash {
     $self->modhash ($decoded->{json}{data}{modhash});
 }
 
-# takes link, returns post ID
-sub parse_link {
+sub _parse_link {
     my $self = shift;
     my $link = shift;
 
     my ($id) = $link =~ /comments\/(\w+)\//i;
-    return $id;
-}
-
-#>---------------------------------------------------<#
-#  Main Methods
-#>---------------------------------------------------<#
-
-# Login to reddit
-sub login {
-    my $self = shift;
-    
-    if (@_) {
-        $self->user ($_[0]);
-        $self->passwd ($_[1]);
-    }
-    my $response = $self->ua->post($self->login_url,
-        {
-            api_type    => $self->api_type,
-            user        => $self->user,
-            passwd      => $self->passwd,
-        }
-    );
-
-    $self->set_cookie( $response);
-#   print Dumper $response;
+    return 't3_' . $id;
 }
 
 # Submit link to reddit
@@ -129,7 +167,7 @@ sub submit_link {
 
     my $kind        = 'link';
 
-    my $newpost     = $self->ua->post($self->submit_url,
+    my $newpost     = $self->ua->post($self->submit_api,
         {
             uh      => $self->modhash,
             kind    => $kind,
@@ -153,10 +191,9 @@ sub submit_link {
 sub submit_story {
     my $self = shift;
     my ($title, $text, $subreddit) = @_;
-
+ 
     my $kind        = 'self';
-
-    my $newpost     = $self->ua->post($self->submit_url,
+    my $newpost     = $self->post($self->submit_api,
         {
             uh       => $self->modhash,
             kind     => $kind,
@@ -172,10 +209,81 @@ sub submit_story {
 
     #returns id and link to new post if successful
     my $link = $decoded->{jquery}[12][3][0];
-    my $id = $self->parse_link($link);
+    my $id = $self->_parse_link($link);
 
     return $id, $link;
 }
+
+sub comment {
+    my $self = shift;
+    my ($thing_id, $comment) = @_;
+
+    my $response = $self->post($self->comment_api,
+        {
+            thing_id    => $thing_id,
+            text        => $comment,
+            uh          => $self->modhash,
+        },
+    );
+
+    my $decoded = from_json $response->content;
+    return $decoded->{jquery}[18][3][0][0]->{data}{id};
+}
+
+sub get_user_info {
+	my $self = shift;
+	my $search_name = shift;
+
+	$self->_user_search_name($search_name);
+
+	my $response = $self->get ($self->about_user_api);
+	my $decoded = from_json $response->content;
+	my $data = $decoded->{data};
+
+	while (my ($key, $value) = each %{$data}) {
+   		if (ref $value eq 'JSON::XS::Boolean'){
+	    	$value = $value ? '1' : '0' ;
+		}
+		$self->user_info->$key($value);	
+	}
+	return $self->user_info;
+}
+
+sub vote {
+	my $self = shift; 
+	my ($thing_id, $direction) = @_;
+	
+	given ($direction) {
+		when ( /up/i || 1) {
+			$direction = 1;
+		}
+		when ( /down/i || -1) {
+			$direction = -1;
+		}
+		when ( /rescind/i || 0 ) {
+			$direction = 0;
+		}
+		default {
+			warn "Please enter a valid direction";
+			return 0;
+		}
+	}
+
+	my $response = $self->post ( $self->vote_api, 
+		{
+			id	=> $thing_id,
+			dir => $direction,
+			uh	=> $self->modhash
+		}
+	);
+	
+	return $response->content;
+}
+
+
+
+no Moose;
+__PACKAGE__->meta->make_immutable;
 
 1;
 __END__
@@ -188,15 +296,31 @@ Reddit - Perl extension for http://www.reddit.com
 
   use Reddit;
   
-  # $username, $password, [$subreddit]
-  $r = Reddit->new('Foo', 'Bar', 'Perl');
+  # instantatiate a new reddit object
+  # Automajically handles logging in and cookie handling
+  $r = Reddit->new(
+      {
+          user_name => 'Foo', 
+		  password  => 'Bar', 
+		  subreddit => 'Perl'
+	  }
+  );
 
-  # optionally, you may specify $username, $passwd and $subreddit here
-  $r->login;
-
-  # $title, $url, [$subreddit]
-  # This overrides a subreddit set previously
+  # Submit a link
+  # $title, $url, $subreddit
+  # This overrides a subreddit set duriing instantiation
   $r->submit_link( 'Test', 'http://example.com', 'NotPerl');
+
+  # Submit a Self Post
+  # $title, $text, $subreddit
+  # This overrides a subreddit set during instantiation
+  $r->submit_story( 'Self.test', 'Some Text Here', 'shareCoding');  
+
+  # Post a top level comment to a URL or .self post 
+  $r->comment($post_id, $comment);
+  
+  # Post a reply to a comment
+  $r->comment($comment_id, $comment);
 
 =head1 DESCRIPTION
 
@@ -207,7 +331,6 @@ This module is still largely inprogress.
 =head2 Requires
 
   common::sense
-  LWP::Simple
   LWP::UserAgent
   JSON
   HTTP::Cookies
@@ -219,10 +342,34 @@ This module is still largely inprogress.
 
 None.
 
+=head1 Provided Methods
+
+=item B<submit_link($title, $url, $subreddit)>
+  $r->submit_link( 'Test', 'http://example.com', 'NotPerl');
+This method posts links to the specified subreddit.  The subreddit parameter is optional if it is not set at the time of instantiation
+$subreddit is required in one place or the other, subreddit specified here will take precedence over the subreddit specified at time of instantiation.
+
+=item B<submit_story($title, $text, $subreddit)>
+  $r->submit_story( 'Self.test', 'Some Text Here', 'shareCoding');
+This method makes a Self.post to the specified subreddit.  The subreddit parameter is optional if it is not set at the time of instantiation
+$subreddit is required in one place or the other, subreddit specified here will take precedence over the subreddit specified at time of instantiation.
+
+=item B<comment($post_id, $comment)>
+   
+To post a top level comment to a URL or .self post 
+  $r->comment($post_id, $comment);
+
+To post a reply to a comment
+  $r->comment($comment_id, $comment);
+This methid requires you pass in the cannonical thing ID with the correct thing prefix.
+Submit methods return cannonical thing IDs, L<See the FULLNAME Glossary|https://github.com/reddit/reddit/wiki/API> for futher information
+
+The post_id is the alphanumeric string after the name of the subreddit, before the title of the post
+The comment_id is the alphanumeric string after the title of the post
 
 =head1 SEE ALSO
 
-https://github.com/reddit/reddit/wiki
+L<https://github.com/reddit/reddit/wiki>
 
 =head1 AUTHOR
 
