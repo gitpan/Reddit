@@ -1,8 +1,8 @@
 package Reddit;
 
-our $VERSION = '0.30';
+our $VERSION = '0.3.02';
 
-use 5.012004;
+use 5.010001;
 use Data::Dumper;
 
 use common::sense;
@@ -241,7 +241,7 @@ sub get_user_info {
 	my $data = $decoded->{data};
 
 	while (my ($key, $value) = each %{$data}) {
-   		if (ref $value eq 'JSON::XS::Boolean'){
+   		if (JSON::is_bool ref $value){
 	    	$value = $value ? '1' : '0' ;
 		}
 		$self->user_info->$key($value);	
@@ -291,6 +291,8 @@ __END__
 =head1 NAME
 
 Reddit - Perl extension for http://www.reddit.com
+
+See github for the most up to date version: https://github.com/three18ti/Reddit.pm
 
 =head1 SYNOPSIS
 
@@ -344,6 +346,8 @@ None.
 
 =head1 Provided Methods
 
+=over 2
+
 =item B<submit_link($title, $url, $subreddit)>
   $r->submit_link( 'Test', 'http://example.com', 'NotPerl');
 This method posts links to the specified subreddit.  The subreddit parameter is optional if it is not set at the time of instantiation
@@ -366,6 +370,8 @@ Submit methods return cannonical thing IDs, L<See the FULLNAME Glossary|https://
 
 The post_id is the alphanumeric string after the name of the subreddit, before the title of the post
 The comment_id is the alphanumeric string after the title of the post
+
+=back
 
 =head1 SEE ALSO
 
