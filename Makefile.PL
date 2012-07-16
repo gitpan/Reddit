@@ -11,7 +11,9 @@ use ExtUtils::MakeMaker 6.30;
 my %WriteMakefileArgs = (
   "ABSTRACT" => "Perl extension for http://www.reddit.com",
   "AUTHOR" => "three18ti <three18ti\@gmail.com>",
-  "BUILD_REQUIRES" => {},
+  "BUILD_REQUIRES" => {
+    "Test::More" => 0
+  },
   "CONFIGURE_REQUIRES" => {
     "ExtUtils::MakeMaker" => "6.30"
   },
@@ -20,14 +22,15 @@ my %WriteMakefileArgs = (
   "LICENSE" => "perl",
   "NAME" => "Reddit",
   "PREREQ_PM" => {
-    "Data::Dumper" => 0,
     "HTTP::Cookies" => 0,
     "JSON" => 0,
     "LWP::UserAgent" => 0,
     "Moose" => 0,
-    "common::sense" => 0
+    "common::sense" => 0,
+    "strict" => 0,
+    "warnings" => 0
   },
-  "VERSION" => "0.001",
+  "VERSION" => "0.03.03",
   "test" => {
     "TESTS" => "t/*.t"
   }

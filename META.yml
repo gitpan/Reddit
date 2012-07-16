@@ -2,7 +2,8 @@
 abstract: 'Perl extension for http://www.reddit.com'
 author:
   - 'three18ti <three18ti@gmail.com>'
-build_requires: {}
+build_requires:
+  Test::More: 0
 configure_requires:
   ExtUtils::MakeMaker: 6.30
 dynamic_config: 0
@@ -13,11 +14,12 @@ meta-spec:
   version: 1.4
 name: Reddit
 requires:
-  Data::Dumper: 0
   HTTP::Cookies: 0
   JSON: 0
   LWP::UserAgent: 0
   Moose: 0
   common::sense: 0
   perl: 5.010001
-version: 0.001
+  strict: 0
+  warnings: 0
+version: 0.03.03
