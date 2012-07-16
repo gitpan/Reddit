@@ -1,20 +1,56 @@
-use inc::Module::Install;
 
-name     'Reddit';
-all_from 'lib/Reddit.pm';
-author   q{Jon A <three18ti@gmail.com>};
-license  'perl';
+use strict;
+use warnings;
 
-build_requires 'Test::More';
+use 5.010001;
 
-requires 'LWP'              => '6.02';
-requires 'LWP::UserAgent'   => '6.02';
-requires 'JSON'             => '2.53';
-requires 'HTTP::Cookies'    => '6.00';
-requires 'Moose'            => '2.0200';
-requires 'common::sense'    => '3.4';
+use ExtUtils::MakeMaker 6.30;
 
-auto_install;
 
-WriteAll;
+
+my %WriteMakefileArgs = (
+  "ABSTRACT" => "Perl extension for http://www.reddit.com",
+  "AUTHOR" => "three18ti <three18ti\@gmail.com>",
+  "BUILD_REQUIRES" => {},
+  "CONFIGURE_REQUIRES" => {
+    "ExtUtils::MakeMaker" => "6.30"
+  },
+  "DISTNAME" => "Reddit",
+  "EXE_FILES" => [],
+  "LICENSE" => "perl",
+  "NAME" => "Reddit",
+  "PREREQ_PM" => {
+    "Data::Dumper" => 0,
+    "HTTP::Cookies" => 0,
+    "JSON" => 0,
+    "LWP::UserAgent" => 0,
+    "Moose" => 0,
+    "common::sense" => 0
+  },
+  "VERSION" => "0.001",
+  "test" => {
+    "TESTS" => "t/*.t"
+  }
+);
+
+
+unless ( eval { ExtUtils::MakeMaker->VERSION(6.56) } ) {
+  my $br = delete $WriteMakefileArgs{BUILD_REQUIRES};
+  my $pp = $WriteMakefileArgs{PREREQ_PM};
+  for my $mod ( keys %$br ) {
+    if ( exists $pp->{$mod} ) {
+      $pp->{$mod} = $br->{$mod} if $br->{$mod} > $pp->{$mod};
+    }
+    else {
+      $pp->{$mod} = $br->{$mod};
+    }
+  }
+}
+
+delete $WriteMakefileArgs{CONFIGURE_REQUIRES}
+  unless eval { ExtUtils::MakeMaker->VERSION(6.52) };
+
+WriteMakefile(%WriteMakefileArgs);
+
+
 

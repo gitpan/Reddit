@@ -1,5 +1,117 @@
-Revision history for Reddit
+Changelog for Reddit
 
-0.01    Date/time
-        First version, released on an unsuspecting world.
+0.001 2012-07-16T00:02:06
+ [--global <three18ti@gmail.com>]
+ - added moose dependencies
+
+
+ [Jon A <jon@handynetworks.com>]
+ - removed utility script
+
+ - Updated POD to pass tests
+
+ - Updated Makefile
+
+ - verified Moose dependency in Makefile, per CPAN Ticket: 74867
+   https://rt.cpan.org/Ticket/Display.html?id=74867
+
+ - moved versions.pl script out of source tree.
+
+ - updated to use version 5.010001, in response to CPAN Ticket 71748
+   https://rt.cpan.org/Ticket/Display.html?id=71748
+
+ - updated readme with link to github
+
+
+ [Jon A <three18ti@gmail.com>]
+ - using JSON::is_bool interface instead of direct JSON::XS interface, line
+   244
+
+ - removed temp make files... again?
+
+ - made and installed, then removed make dir.
+   added packages and rereleased to cpan
+
+ - fixed boolean resolution.
+
+ - fixed loop to resolve boolean values.
+
+ - addded code to evaluate JSON::XS::Boolean values.
+
+ - added vote method
+
+ - added vote method
+
+ - updated MANIFEST
+
+ - added type object for subreddit and user
+   added method to load user object / get user info
+
+ - this time added the packages for real...
+
+ - removed extra branch
+
+ - added snapshot of package
+
+ - updated makefile, removed unnecessary LWP::Simple requirement
+   Updated POD
+
+ - modified link parse method to identify type of link, comment returns
+   comment thing ID.
+
+ - added moose branch and rewrote using moose
+
+ - added new version with comment function
+
+ - Added mothod for posting comments
+
+ - wrote READEME welcome message
+
+ - uploaded base files
+
+ - first commit
+
+
+ [dookerdo <koni@archlinux.us>]
+ - Update source/Reddit/lib/Reddit.pm
+   
+   Comment id's require a prefix of t1_ or t3_ depending on whether it is a
+   top-level comment or a sub-comment. Top level comments use the post's id
+   (5 characters) and sub-comments use the parent comment's id (7
+   characters).
+
+
+ [root <three18ti@gmail.com>]
+ - Converted to using Module::Install
+
+
+ [three18ti <three18ti@gmail.com>]
+ - added gitignore, updated dist.ini
+
+ - updated dist.ini
+
+ - renamed again
+
+ - Renamed to readme.pod
+
+ - renamed to README.md
+
+ - renamed README to README.git
+
+ - added README to prune cruft to avoid [DZ] attempt to add README multiple
+   times; added by: @Basic/GatherDir (Dist::Zilla::Plugin::GatherDir line
+   103); @Basic/Readme (Dist::Zilla::Plugin::Readme line 39)
+
+ - fixed & sub call to OO -> call
+
+ - updated to use Dist::Zilla, formatted to canonical git format
+
+ - added zipped version of module
+
+ - Merge branch 'master' of github.com:three18ti/Reddit.pm
+
+ - Merge pull request #1 from dookerdo/master
+   
+   Reddit.pm comment id tag
+
 
